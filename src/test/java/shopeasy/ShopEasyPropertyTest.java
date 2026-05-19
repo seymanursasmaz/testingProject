@@ -69,4 +69,65 @@ class ShopEasyPropertyTest {
     // }
     // -----------------------------------------------------------------------
 
+     /**
+     * Property: It is required that the result of calculate never exceeds twice the amount of the base price (i.e., base + 100% tax).
+     * Bug class detected: If any implementation permits result > 2 * base (e.g., tax > 100 or logic error), a bug class is detected.
+     */
+
+    @Property
+    void resultNeverExceedsDoubleBase(
+            @ForAll @DoubleRange(min = 0, max = 10_000) double base,
+            @ForAll @DoubleRange(min = 0, max = 100)   double discount,
+            @ForAll @DoubleRange(min = 0, max = 100)   double tax) {
+        PriceCalculator calc = new PriceCalculator();
+        double price = calc.calculate(base, discount, tax);
+        assertThat(price).isLessThanOrEqualTo(base * 2.0);
+    }
+
+     /**
+      * Property: Cart total is independent of the order in which products are added (commutativity).
+      * Bug class detected: Any code path where order of insertion affects the total.
+      */
+    @Provide
+    Arbitrary<Product> validProducts() {
+        return Combinators.combine(
+                Arbitraries.strings().alpha().ofMinLength(1).ofMaxLength(5),
+                Arbitraries.doubles().between(0.01, 500.0)
+        ).as((name, price) -> new Product("P-" + name, name, price, 100));
+    }
+
+    @Property
+    void cartTotalIsCommutative(
+        @ForAll("validProducts") Product prod1,
+        @ForAll("validProducts") Product prod2,
+        @ForAll("validProducts") Product prod3) {
+        ShoppingCart cartA = new ShoppingCart();
+        cartA.addItem(prod1, 1);
+        cartA.addItem(prod2, 1);
+        cartA.addItem(prod3, 1);
+
+        ShoppingCart cartB = new ShoppingCart();
+        cartB.addItem(prod3, 1);
+        cartB.addItem(prod2, 1);
+        cartB.addItem(prod1, 1);
+
+        assertThat(cartA.total()).isEqualTo(cartB.total());
+    }
+    
+    /**
+     * Property: Increasing the discount rate (with base and tax fixed) should not increase the final price (monotonicity).
+     * Bug class detected: Any implementation where a higher discount yields a higher price.
+     */
+    @Property
+    void increasingDiscountNeverRaisesPrice(
+        @ForAll @DoubleRange(min = 0, max = 10_000) double base,
+        @ForAll @DoubleRange(min = 0, max = 100)  double tax,
+        @ForAll @DoubleRange(min = 0, max = 49)  double smallDiscount,
+        @ForAll @DoubleRange(min = 50, max = 100) double bigDiscount
+    ) {
+        PriceCalculator calc = new PriceCalculator();
+        double priceSmallDiscount = calc.calculate(base, smallDiscount, tax);
+        double priceBigDiscount = calc.calculate(base, bigDiscount, tax);
+        assertThat(priceBigDiscount).isLessThanOrEqualTo(priceSmallDiscount);
+    }
 }
