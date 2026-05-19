@@ -56,4 +56,87 @@ class ShoppingCartStructuralTest {
     // HINT: Run `mvn test` after every few tests to see coverage progress.
     // -----------------------------------------------------------------------
 
+    // Adding a product that is not yet in the cart
+    @Test
+    void addProductToEmptyCart() {
+        cart.addItem(apple, 5);
+        assertThat(cart.total()).isEqualTo(7.50);
+    }
+
+    // Adding a product that already exists in the cart
+    @Test
+    void addProductAlreadyInCart() {
+        cart.addItem(apple, 5);
+        cart.addItem(apple, 3);
+        assertThat(cart.total()).isEqualTo(12.00);
+    }
+
+    // Adding multiple distinct products to the cart
+    @Test
+    void addSeveralProductsToCart() {
+        cart.addItem(apple, 5);
+        cart.addItem(banana, 10);
+        assertThat(cart.total()).isEqualTo(15.50);
+    }
+
+    // Removing a product that is present in the cart
+    @Test
+    void removeExistingProductFromCart() {
+        cart.addItem(apple, 5);
+        cart.removeItem("P001");
+        assertThat(cart.total()).isEqualTo(0.00);
+    }
+
+    // updateQuantity should throw if quantity is not positive
+    @Test
+    void updateQuantityWithNonPositiveValue() {
+        cart.addItem(apple, 5);
+        assertThatThrownBy(() -> cart.updateQuantity("P001", 0))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("Quantity must be > 0");
+    }
+
+    // updateQuantity should throw if product is not in the cart
+    @Test
+    void updateQuantityForProductNotInCart() {
+        assertThatThrownBy(() -> cart.updateQuantity("P999", 5))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("Product not found in cart: P999");
+    }
+
+    // updateQuantity should throw if product code does not match any in the cart
+    @Test
+    void updateQuantityForWrongProductCode() {
+        cart.addItem(apple, 5);
+        assertThatThrownBy(() -> cart.updateQuantity("P002", 5))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("Product not found in cart: P002");
+    }
+
+    // updateQuantity should update the quantity for a valid product
+    @Test
+    void updateQuantityForProductInCart() {
+        cart.addItem(apple, 5);
+        cart.updateQuantity("P001", 10);
+        assertThat(cart.total()).isEqualTo(15.00);
+    }
+
+    // applyDiscount should apply a positive discount rate
+    @Test
+    void applyDiscountWithValidRate() {
+        cart.addItem(apple, 5);
+        double discountedTotal = cart.applyDiscount(20);
+        assertThat(discountedTotal).isEqualTo(6.00);
+    }
+
+    // getItems should return the correct number of items in the cart
+    @Test
+    void getItemsReturnsExpectedItemCount() {
+        cart.addItem(apple, 5);
+        cart.addItem(banana, 10);
+        assertThat(cart.itemCount()).isEqualTo(2);
+    }
+
+    // -----------------------------------------------------------------------
+
 }
