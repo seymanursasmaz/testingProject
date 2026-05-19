@@ -137,6 +137,35 @@ class ShoppingCartStructuralTest {
         assertThat(cart.itemCount()).isEqualTo(2);
     }
 
+    @Test
+        void updateQuantityForWrongProductInNonEmptyCart() {
+            cart.addItem(apple, 5);
+            cart.clear();
+            assertThatThrownBy(() -> cart.updateQuantity("P002", 10));
+        }
+
+    @Test
+        void clearRemovesAllItemsFromCart() {
+
+            cart.addItem(apple, 3);
+            cart.addItem(banana, 5);
+            assertThat(cart.itemCount()).isGreaterThan(0);
+            assertThat(cart.total()).isGreaterThan(0.00);
+
+            cart.clear();
+
+            assertThat(cart.itemCount()).isEqualTo(0);
+            assertThat(cart.total()).isEqualTo(0.00);
+            assertThat(cart.getItems()).isEmpty();
+        }
+
+    @Test
+        void testToStringFormatting() {
+            cart.addItem(apple, 2); 
+
+            String expectedOutput = "ShoppingCart{items=1, total=3,00}";
+            assertThat(cart.toString()).isEqualTo(expectedOutput);
+        }
     // -----------------------------------------------------------------------
 
 }
