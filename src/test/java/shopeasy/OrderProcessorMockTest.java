@@ -8,6 +8,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.assertj.core.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.anyDouble;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 /**
@@ -77,6 +79,65 @@ class OrderProcessorMockTest {
     //     assertThat(order.getTotal()).isEqualTo(50.0);
     //     verify(paymentGateway).charge("customer-1", 50.0);
     // }
+
+    // Standard scenario: inventory and payment both succeed
+    @Test
+    void process_returnsOrderWhenInventoryAndPaymentSucceed() {
+        cart.addItem(widget, 2);
+        // Arrange mocks for available inventory and successful payment
+        when(inventoryService.isAvailable(widget, 2)).thenReturn(true);
+        when(paymentGateway.charge("customer-1", 50.0)).thenReturn(true);
+        // Act
+        Order result = orderProcessor.process("customer-1", cart);
+        // Assert
+        assertThat(result).isNotNull();
+        assertThat(result.getCustomerId()).isEqualTo("customer-1");
+        assertThat(result.getTotal()).isEqualTo(50.0);
+        verify(paymentGateway).charge("customer-1", 50.0);
+    }
+
+    // Should return null and never charge if inventory is not available
+    @Test
+    void process_returnsNullIfInventoryUnavailable() {
+        cart.addItem(widget, 2);
+        // Arrange mock for unavailable inventory
+        when(inventoryService.isAvailable(widget, 2)).thenReturn(false);
+        // Act
+        Order result = orderProcessor.process("customer-1", cart);
+        // Assert
+        assertThat(result).isNull();
+        verify(paymentGateway, never()).charge(anyString(), anyDouble());
+    }
+
+    // Should return null if payment fails, even if inventory is available
+    @Test
+    void process_returnsNullIfPaymentFails() {
+        cart.addItem(widget, 2);
+        // Arrange mocks for available inventory and failed payment
+        when(inventoryService.isAvailable(widget, 2)).thenReturn(true);
+        when(paymentGateway.charge("customer-1", 50.0)).thenReturn(false);
+        // Act
+        Order result = orderProcessor.process("customer-1", cart);
+        // Assert
+        assertThat(result).isNull();
+        verify(paymentGateway).charge("customer-1", 50.0);
+    }
+
+    // If only some items are available in inventory, should return null and never charge
+    @Test
+    void process_returnsNullIfPartialInventoryAvailable() {
+        Product gadget = new Product("P002", "Gadget", 25.0, 1);
+        cart.addItem(widget, 2);
+        cart.addItem(gadget, 5);
+        // Arrange mocks: widget available, gadget unavailable
+        when(inventoryService.isAvailable(widget, 2)).thenReturn(true);
+        when(inventoryService.isAvailable(gadget, 5)).thenReturn(false);
+        // Act
+        Order result = orderProcessor.process("customer-1", cart);
+        // Assert
+        assertThat(result).isNull();
+        verify(paymentGateway, never()).charge(anyString(), anyDouble());
+    }
     // -----------------------------------------------------------------------
 
 }
